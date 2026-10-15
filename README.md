@@ -142,7 +142,7 @@ cd frontend && npm install && npm run dev
 | --- | --- |
 | 启动报端口被占用 | 方式一：改 `.env` 里的 `FRONTEND_PORT` / `BACKEND_PORT` 后重新 `docker compose up -d --build`；方式二：把 `docker run` 的 `-p 3307:3306` 换成别的端口，并用 `SERVER_PORT=新端口 mvn spring-boot:run` 启动后端 |
 | 页面能开但一直转圈 / 报网络错误 | 多半是后端还没就绪。浏览器访问 http://localhost:8092/api/plaza/stats （方式一）或 http://localhost:8091/api/plaza/stats （方式二），返回 `{"code":0,...}` 后再刷新页面 |
-| 想让演员接真实大模型 | 看下面的「AI 模式切换」：把 DeepSeek Key 填进 `.env` 的 `DEEPSEEK_API_KEY` 再重启即可 |
+| 想让演员接真实大模型 | 按下面「AI 模式切换」里的「接入 DeepSeek 五步上手」走一遍；本地开发方式看同节末尾小节 |
 
 ## AI 模式切换
 
@@ -152,6 +152,33 @@ cd frontend && npm install && npm run dev
 | 真实大模型 | 填入 DeepSeek API Key | OpenAI 兼容协议，换供应商只需改 `DEEPSEEK_BASE_URL` / `DEEPSEEK_MODEL` |
 
 真实模式请求失败时自动降级 Mock 出演并记录上游错误，演出永不中断；所有调用（成功 / 降级）均落 `llm_usage` 表供运营看板统计。
+
+### 接入 DeepSeek 五步上手（方式一）
+
+1. **申请 Key**：打开 [DeepSeek 开放平台](https://platform.deepseek.com) 注册登录 → 先充值（按 token 用量计费，几块钱够玩很久）→ 左侧「API keys」→「创建 API key」→ 立即复制（只显示一次，格式形如 `sk-xxxxxxxx`）
+2. **填入配置**：在项目根目录编辑 `.env`，把 `DEEPSEEK_API_KEY=` 等号后填上你的 key（注意等号两边不要加空格、key 不要带引号）：
+   ```bash
+   nano .env   # 找到 DEEPSEEK_API_KEY= 一行，粘贴 key；Ctrl+O 回车保存，Ctrl+X 退出
+   ```
+3. **重启生效**：
+   ```bash
+   docker compose up -d            # .env 有变化时会自动重建相关容器
+   docker compose logs -f backend  # 可选：盯一眼后端日志确认启动成功
+   ```
+4. **验证**：新开一场戏，演员接话会明显更“活人”；想看调用统计，可用管理员账号进 `/admin` 数据看板（管理员开通见 [DEPLOY.md](DEPLOY.md) 第三节）
+5. **失败也不慌**：Key 填错或欠费时后端会自动降级回离线演员模式，演出不中断，`docker compose logs backend` 里能看到降级原因
+
+### 本地开发（方式二）怎么接 Key
+
+`.env` 只有 docker compose 会读，**本地直接跑后端时它不读这个文件**，要用环境变量把 Key 传给后端：
+
+```bash
+cd backend
+DEEPSEEK_API_KEY=sk-你的key mvn spring-boot:run     # 一次性写法：只对这个进程生效
+# 或者先 export DEEPSEEK_API_KEY=sk-你的key，再 mvn spring-boot:run
+```
+
+换 Key 或换模型后：Ctrl+C 停掉，重新执行上面的命令即可；前端不用重启。
 
 ## 接口测试
 
@@ -176,6 +203,60 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest -v
 | `DEEPSEEK_BASE_URL` / `DEEPSEEK_MODEL` | DeepSeek 官方 | OpenAI 兼容供应商可替换 |
 
 完整部署细节、管理员开通与生产加固清单见 [DEPLOY.md](DEPLOY.md)，产品与模块设计见 [DESIGN.md](DESIGN.md)。
+
+## 部署到公网
+
+以下两种方式都假设你已经用「方式一：Docker Compose」把项目跑起来了。临时演示用 A，正式运营用 B。
+
+### 方式 A：cpolar 内网穿透（几分钟上线，适合临时演示）
+
+1. **注册拿 token**：[cpolar 官网](https://www.cpolar.com) 注册登录，在后台「验证」页复制你的 authtoken
+2. **安装**（Linux 一行命令；Windows / macOS 去官网下载页装客户端）：
+   ```bash
+   curl -L https://www.cpolar.com/static/downloads/install-release-cpolar.sh | sudo bash
+   ```
+3. **绑定账号**：`cpolar authtoken 你的token`
+4. **开隧道**：`cpolar http 8080`（穿透 compose 的前端；若用的是方式二本地开发，就 `cpolar http 5173`）
+5. 终端会打印出一个公网地址（形如 `https://xxxx.cpolar.top`），发给任何人都能直接打开玩
+
+注意事项：
+
+- **公开前先把 `.env` 的 `JWT_SECRET` 换成随机串**（`openssl rand -hex 32` 生成），MySQL 默认密码也建议一并改掉
+- 只穿透前端端口（8080 或 5173）就够，**不要**把 8092（后端直连口）、3306（数据库）暴露出去
+- 免费版每次重启隧道域名都会变，固定域名需付费版；演示完 Ctrl+C 即关闭
+
+### 方式 B：正式云服务器（长期上线）
+
+1. **买服务器**：阿里云 / 腾讯云轻量应用服务器，2 核 2G 就够，系统选 Ubuntu 22.04
+2. **放端口**：控制台「安全组」入方向放行 **80、22**（要上 HTTPS 再加 443）；**不要**放行 8092 / 3306
+3. **装 Docker**（SSH 登录服务器后执行）：
+   ```bash
+   curl -fsSL https://get.docker.com | sudo bash
+   sudo usermod -aG docker $USER && newgrp docker   # 重新加载权限，之后免 sudo 用 docker
+   ```
+4. **拉代码并配置**：
+   ```bash
+   git clone https://github.com/Wyy520-create/chattheater.git
+   cd chattheater
+   cp .env.example .env && nano .env
+   ```
+   生产必改三项：`JWT_SECRET` 填 `openssl rand -hex 32` 生成的随机串；`MYSQL_PASSWORD` 和 `MYSQL_ROOT_PASSWORD` 换成强密码（两处保持一致）；要真实演员出演再填 `DEEPSEEK_API_KEY`
+5. **启动**：
+   ```bash
+   docker compose up -d --build
+   ```
+6. **验证**：浏览器访问 `http://服务器公网IP` 能看到首页即上线成功；`curl http://服务器公网IP/api/plaza/stats` 返回 `{"code":0,...}` 说明后端也就绪了
+7. **（可选）绑域名 + HTTPS**：
+   - 在域名控制台加一条 A 记录指向服务器公网 IP（国内服务器 + 国内域名需先完成备案）
+   - 用 Caddy 自动申请并续期证书（Caddy 会占用 80/443，所以 `.env` 里 `FRONTEND_PORT` 保持 8080 不要动）：
+     ```bash
+     printf '你的域名.com\n\nreverse_proxy localhost:8080\n' > Caddyfile
+     docker run -d --name caddy --network host \
+       -v $PWD/Caddyfile:/etc/caddy/Caddyfile --restart unless-stopped caddy:2
+     ```
+     之后访问 `https://你的域名.com` 即可
+
+日常运维（更多命令见 [DEPLOY.md](DEPLOY.md) 第六节）：看日志 `docker compose logs -f backend`；更新版本 `git pull && docker compose up -d --build`；数据库备份用 `mysqldump`（命令在 DEPLOY.md 第六节）。
 
 ## License
 
