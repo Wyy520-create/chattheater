@@ -1,0 +1,65 @@
+# ChatTheater 一键编排：MySQL + 后端 + 前端
+# 用法：cp .env.example .env（按需修改）→ docker compose up -d --build
+# 访问：前端 http://localhost:8080，后端直连 http://localhost:8092（避开本机 dev 的 8091）
+name: chattheater
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: chattheater-mysql-app
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-chattheater123}
+      MYSQL_DATABASE: ${MYSQL_DB:-chattheater}
+      MYSQL_USER: ${MYSQL_USER:-chattheater}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-chattheater123}
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      # $$ 为 compose 转义：让密码在容器内展开而非 compose 解析
+      test: ["CMD-SHELL", "mysqladmin ping -h127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 4s
+      retries: 30
+      start_period: 40s
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    image: chattheater-backend:latest
+    container_name: chattheater-backend-app
+    environment:
+      TZ: Asia/Shanghai
+      SERVER_PORT: "8091"
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_DB: ${MYSQL_DB:-chattheater}
+      MYSQL_USER: ${MYSQL_USER:-chattheater}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-chattheater123}
+      JWT_SECRET: ${JWT_SECRET:-chattheater-dev-secret-please-change-in-production-0123456789}
+      # 留空 = 离线演员（Mock）模式，零成本全功能可玩
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "${BACKEND_PORT:-8092}:8091"
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    image: chattheater-frontend:latest
+    container_name: chattheater-frontend-app
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    restart: unless-stopped
+
+volumes:
+  mysql-data:

@@ -1,0 +1,59 @@
+/* ============================================================
+   ChatTheater 设计系统 · 暗色剧院主题
+   聚光灯金 + 幕布紫：舞台感、沉浸感、戏剧性
+   ============================================================ */
+:root {
+  /* 基底 */
+  --bg: #0e1016;
+  --bg-soft: #141722;
+  --panel: #1a1e2c;
+  --panel-2: #222739;
+  --border: #2c3247;
+  --border-soft: #242a3d;
+
+  /* 文字 */
+  --text: #e9ecf5;
+  --text-2: #a7aec4;
+  --text-3: #6f7793;
+
+  /* 品牌色：聚光灯金 */
+  --gold: #f5c518;
+  --gold-soft: rgba(245, 197, 24, 0.14);
+  --gold-line: rgba(245, 197, 24, 0.35);
+
+  /* 幕布紫 */
+  --violet: #8b7bff;
+  --violet-soft: rgba(139, 123, 255, 0.15);
+
+  /* 语义色 */
+  --heat: #ff5a5f;
+  --heat-soft: rgba(255, 90, 95, 0.15);
+  --ok: #3ecf8e;
+  --ok-soft: rgba(62, 207, 142, 0.14);
+  --info: #58a6ff;
+  --warn: #ffb02e;
+
+  /* 情绪色（与后端 EmotionUtil 对齐） */
+  --emo-joy: #ffd166;
+  --emo-angry: #ff6b6b;
+  --emo-sad: #74a0ff;
+  --emo-shock: #ff9f43;
+  --emo-jealousy: #a78bfa;
+  --emo-pride: #4ecdc4;
+  --emo-neutral: #8a93ad;
+
+  /* 字体 */
+  --font: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+  --font-mono: "SF Mono", "JetBrains Mono", Consolas, monospace;
+
+  /* 尺寸 */
+  --radius-s: 8px;
+  --radius: 12px;
+  --radius-l: 18px;
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  --shadow-gold: 0 4px 24px rgba(245, 197, 24, 0.22);
+
+  /* 布局 */
+  --nav-h: 60px;
+  --max-w: 1200px;
+}
