@@ -21,10 +21,34 @@ ChatTheater 是一个 AI 群聊扮演 + 导演操控的娱乐平台。用户在�
 | 个人中心 | XP 成长体系（群演 → 场记 → 副导演 → 导演 → 金牌导演）、六维创作统计、我的演员、收藏夹 |
 | 运营后台 | 数据看板、敏感词库 CRUD、审核日志、人设巡查上下架、近 7 日趋势 |
 
+## 界面一览（运行效果截图）
+
+以下截图来自真实运行的实例（离线演员模式，无需任何 API Key）：
+
+| 首页 · 全站数字带与开拍入口 | 创作向导 · 挑剧本场景 |
+| --- | --- |
+| ![首页](docs/screenshots/landing.jpeg) | ![创作向导](docs/screenshots/wizard.jpeg) |
+
+| 实时剧场 · SSE 气泡与投票改剧本结算 | 导演台 · 指令 / 事件卡 / 节奏控制 / 喊杀青 |
+| --- | --- |
+| ![实时剧场](docs/screenshots/room.jpeg) | ![导演台](docs/screenshots/director.jpeg) |
+
+| 剧组 PK 擂台 · 助威打榜定胜负 | 剧情广场 · 直播中 / 已完结双榜 |
+| --- | --- |
+| ![剧组PK擂台](docs/screenshots/pk.jpeg) | ![剧情广场](docs/screenshots/plaza.jpeg) |
+
+| 人设工坊 · 演员市场（30 位官方演员） | 个人中心 · XP 成长档案 |
+| --- | --- |
+| ![人设工坊](docs/screenshots/workshop.jpeg) | ![个人中心](docs/screenshots/me.jpeg) |
+
+| 名场面馆 · 杀青高光 TOP3 + 台本回放 |
+| --- |
+| ![名场面馆](docs/screenshots/hall.jpeg) |
+
 ## 技术架构
 
 - **后端**：Spring Boot 3.3 + Java 17，MyBatis-Plus + MySQL 8，JWT 鉴权，SSE 实时推送，AI 网关（DeepSeek OpenAI 兼容协议，失败自动降级 Mock），敏感词审核覆盖注册昵称 / 人设 / 发言 / 试聊全入口
-- **前端**：Vue 3.5 + Vite 5 + Pinia + Vue Router，15 个视图 / 7 大模块，全端响应式设计系统
+- **前端**：Vue 3.5 + Vite 5 + Pinia + Vue Router，16 个视图 / 7 大模块，全端响应式设计系统
 - **质量**：pytest 接口自动化 114 用例全绿，含「人设守擂评测」——16 种性格原型各派一位演员连扛 6 轮挑衅，断言台词既像自己、又不串戏
 - **部署**：Docker 多阶段构建 + docker compose 一键编排（MySQL + 后端 + nginx 前端），SSE 反代已调优
 
@@ -41,7 +65,7 @@ ChatTheater/
 │       ├── admin/      # 运营后台
 │       ├── moderation/ # 敏感词审核
 │       └── security/   # JWT、登录拦截器、游客白名单
-├── frontend/           # Vue 3 SPA（15 视图）
+├── frontend/           # Vue 3 SPA（16 视图）
 ├── qa/                 # pytest 接口自动化（114 用例）
 ├── docker-compose.yml  # 一键编排
 ├── DESIGN.md           # 产品与技术设计文档
@@ -49,24 +73,50 @@ ChatTheater/
 └── .env.example        # 环境变量样例
 ```
 
-## 快速开始
+## 快速开始（从零跑起来）
 
-### 方式一：Docker Compose 一键启动
+### 第一步：安装必备软件
+
+**方式一（推荐）Docker Compose：只需装 [Docker](https://www.docker.com/products/docker-desktop/)**
+
+- Windows / macOS：下载 Docker Desktop 安装即可
+- Ubuntu：`sudo apt install docker.io docker-compose-v2`，装完执行 `sudo usermod -aG docker $USER` 后重新登录（免 sudo 用 docker）
+
+**方式二 本地开发：JDK 17 + Maven 3.9+ + Node.js 18+（MySQL 用下面命令顺手起）**
+
+- JDK 17：[Eclipse Temurin 17](https://adoptium.net/temurin/releases/?version=17)
+- Maven 3.9+：[官网下载](https://maven.apache.org/download.cgi)，解压后把 `bin` 目录加入 PATH
+- Node.js 18+：[官网 LTS 版](https://nodejs.org/)
+
+> Windows 用户：以下命令在 PowerShell 或 WSL 终端里执行均可。
+
+### 第二步：把代码拉到本地
 
 ```bash
-cp .env.example .env          # 按需修改密钥（不改也能跑，默认离线演员模式）
-docker compose up -d --build  # MySQL + 后端 + 前端
+# 两种方式任选其一（SSH 更快，HTTPS 免配置）
+git clone git@github.com:Wyy520-create/chattheater.git
+# git clone https://github.com/Wyy520-create/chattheater.git
+cd chattheater
 ```
 
-- 前端：http://localhost:8080
-- 后端直连：http://localhost:8092（`/api/plaza/stats` 可冒烟）
+### 第三步：启动服务（二选一）
 
-> 首次启动 MySQL 需初始化约 30~60 秒，后端会等待健康检查通过后再就绪。建表与种子数据（30 官方人设 / 6 剧本 / 敏感词库）由后端启动时自动完成，无需手工导库。
-
-### 方式二：本地开发
+**方式一：Docker Compose 一键启动（推荐）**
 
 ```bash
-# 1. MySQL（本地已有实例则跳过）
+cp .env.example .env          # 按需修改配置（不改也能跑，默认离线演员模式）
+docker compose up -d --build  # MySQL + 后端 + 前端 一起拉起
+```
+
+- 前端入口：http://localhost:8080
+- 后端直连：http://localhost:8092（浏览器打开 `/api/plaza/stats` 能看到 JSON 即就绪）
+
+> 首次启动 MySQL 初始化约 30~60 秒，后端会等数据库健康检查通过后再开始工作，属正常现象。建表与种子数据（30 官方演员 / 6 剧本 / 敏感词库）由后端启动时自动完成，**不需要手工导库**。
+
+**方式二：本地开发（改代码调试用）**
+
+```bash
+# 1. MySQL（本机已有 8.0 实例可跳过，注意端口 3307）
 docker run -d --name chattheater-mysql -p 3307:3306 \
   -e MYSQL_ROOT_PASSWORD=chattheater123 \
   -e MYSQL_DATABASE=chattheater \
@@ -77,11 +127,22 @@ docker run -d --name chattheater-mysql -p 3307:3306 \
 # 2. 后端（默认 8091，启动时自动建表灌种子）
 cd backend && mvn spring-boot:run
 
-# 3. 前端（Vite dev 5173，已配置 /api 代理）
+# 3. 前端（新开一个终端；Vite dev 5173，已配置 /api 代理）
 cd frontend && npm install && npm run dev
 ```
 
-打开 http://localhost:5173，注册即玩；游客可直接逛广场、围观公开剧场。
+### 第四步：打开浏览器开玩
+
+- 方式一打开 http://localhost:8080 ，方式二打开 http://localhost:5173
+- 注册一个账号即可开拍；**不注册也能以游客身份逛广场、围观公开剧场、给剧组助威**
+
+### 常见问题
+
+| 问题 | 解决办法 |
+| --- | --- |
+| 启动报端口被占用 | 方式一：改 `.env` 里的 `FRONTEND_PORT` / `BACKEND_PORT` 后重新 `docker compose up -d --build`；方式二：把 `docker run` 的 `-p 3307:3306` 换成别的端口，并用 `SERVER_PORT=新端口 mvn spring-boot:run` 启动后端 |
+| 页面能开但一直转圈 / 报网络错误 | 多半是后端还没就绪。浏览器访问 http://localhost:8092/api/plaza/stats （方式一）或 http://localhost:8091/api/plaza/stats （方式二），返回 `{"code":0,...}` 后再刷新页面 |
+| 想让演员接真实大模型 | 看下面的「AI 模式切换」：把 DeepSeek Key 填进 `.env` 的 `DEEPSEEK_API_KEY` 再重启即可 |
 
 ## AI 模式切换
 
